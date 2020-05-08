@@ -473,8 +473,7 @@ func TestBasicAuthPassword(t *testing.T) {
 	})
 
 	rw := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/oauth2/callback?code=callback_code&state=nonce:",
-		strings.NewReader(""))
+	req, _ := http.NewRequest("GET", "/oauth2/callback?code=callback_code&state=nonce:", strings.NewReader(""))
 	req.AddCookie(proxy.MakeCSRFCookie(req, "nonce", proxy.CookieExpire, time.Now()))
 	proxy.ServeHTTP(rw, req)
 	if rw.Code >= 400 {
@@ -530,11 +529,12 @@ func TestBasicAuthWithEmail(t *testing.T) {
 	expectedEmailHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(emailAddress+":"+opts.BasicAuthPassword))
 	expectedUserHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(userName+":"+opts.BasicAuthPassword))
 
+	created := time.Now()
 	session := &sessions.SessionState{
 		User:        userName,
 		Email:       emailAddress,
 		AccessToken: "oauth_token",
-		CreatedAt:   time.Now(),
+		CreatedAt:   &created,
 	}
 	{
 		rw := httptest.NewRecorder()
@@ -571,11 +571,12 @@ func TestPassUserHeadersWithEmail(t *testing.T) {
 	const emailAddress = "john.doe@example.com"
 	const userName = "9fcab5c9b889a557"
 
+	created := time.Now()
 	session := &sessions.SessionState{
 		User:        userName,
 		Email:       emailAddress,
 		AccessToken: "oauth_token",
-		CreatedAt:   time.Now(),
+		CreatedAt:   &created,
 	}
 	{
 		rw := httptest.NewRecorder()
@@ -948,7 +949,8 @@ func (p *ProcessCookieTest) LoadCookiedSession() (*sessions.SessionState, error)
 func TestLoadCookiedSession(t *testing.T) {
 	pcTest := NewProcessCookieTestWithDefaults()
 
-	startSession := &sessions.SessionState{Email: "john.doe@example.com", AccessToken: "my_access_token", CreatedAt: time.Now()}
+	created := time.Now()
+	startSession := &sessions.SessionState{Email: "john.doe@example.com", AccessToken: "my_access_token", CreatedAt: &created}
 	pcTest.SaveSession(startSession)
 
 	session, err := pcTest.LoadCookiedSession()
@@ -974,7 +976,7 @@ func TestProcessCookieRefreshNotSet(t *testing.T) {
 	})
 	reference := time.Now().Add(time.Duration(-2) * time.Hour)
 
-	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
+	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &reference}
 	pcTest.SaveSession(startSession)
 
 	session, err := pcTest.LoadCookiedSession()
@@ -990,7 +992,7 @@ func TestProcessCookieFailIfCookieExpired(t *testing.T) {
 		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
-	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
+	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &reference}
 	pcTest.SaveSession(startSession)
 
 	session, err := pcTest.LoadCookiedSession()
@@ -1005,7 +1007,7 @@ func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
 		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
-	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
+	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &reference}
 	pcTest.SaveSession(startSession)
 
 	pcTest.proxy.CookieRefresh = time.Hour
@@ -1051,8 +1053,9 @@ func NewAuthOnlyEndpointTest(modifiers ...OptionsModifier) *ProcessCookieTest {
 
 func TestAuthOnlyEndpointAccepted(t *testing.T) {
 	test := NewAuthOnlyEndpointTest()
+	created := time.Now()
 	startSession := &sessions.SessionState{
-		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: time.Now()}
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &created}
 	test.SaveSession(startSession)
 
 	test.proxy.ServeHTTP(test.rw, test.req)
@@ -1076,7 +1079,7 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 	})
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
 	startSession := &sessions.SessionState{
-		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &reference}
 	test.SaveSession(startSession)
 
 	test.proxy.ServeHTTP(test.rw, test.req)
@@ -1087,8 +1090,9 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 
 func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
 	test := NewAuthOnlyEndpointTest()
+	created := time.Now()
 	startSession := &sessions.SessionState{
-		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: time.Now()}
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &created}
 	test.SaveSession(startSession)
 	test.validateUser = false
 
@@ -1118,8 +1122,9 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 	pcTest.req, _ = http.NewRequest("GET",
 		pcTest.opts.ProxyPrefix+"/auth", nil)
 
+	created := time.Now()
 	startSession := &sessions.SessionState{
-		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: time.Now()}
+		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created}
 	pcTest.SaveSession(startSession)
 
 	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
@@ -1149,8 +1154,9 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 	pcTest.req, _ = http.NewRequest("GET",
 		pcTest.opts.ProxyPrefix+"/auth", nil)
 
+	created := time.Now()
 	startSession := &sessions.SessionState{
-		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: time.Now()}
+		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created}
 	pcTest.SaveSession(startSession)
 
 	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
@@ -1182,8 +1188,9 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 	pcTest.req, _ = http.NewRequest("GET",
 		pcTest.opts.ProxyPrefix+"/auth", nil)
 
+	created := time.Now()
 	startSession := &sessions.SessionState{
-		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: time.Now()}
+		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created}
 	pcTest.SaveSession(startSession)
 
 	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
@@ -1558,10 +1565,11 @@ func TestGetJwtSession(t *testing.T) {
 	}
 
 	// Bearer
+	expires := time.Unix(1912151821, 0)
 	session, _ := test.proxy.GetJwtSession(test.req)
 	assert.Equal(t, session.User, "john@example.com")
 	assert.Equal(t, session.Email, "john@example.com")
-	assert.Equal(t, session.ExpiresOn, time.Unix(1912151821, 0))
+	assert.Equal(t, session.ExpiresOn, &expires)
 	assert.Equal(t, session.IDToken, goodJwt)
 
 	test.proxy.ServeHTTP(test.rw, test.req)

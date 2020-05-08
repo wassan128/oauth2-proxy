@@ -247,12 +247,15 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.Session
 		return
 	}
 
+	created := time.Now()
+	expires := time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second)
+
 	// Store the data that we found in the session state
 	s = &sessions.SessionState{
 		AccessToken: jsonResponse.AccessToken,
 		IDToken:     jsonResponse.IDToken,
-		CreatedAt:   time.Now(),
-		ExpiresOn:   time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second),
+		CreatedAt:   &created,
+		ExpiresOn:   &expires,
 		Email:       email,
 	}
 	return
